@@ -1,8 +1,9 @@
 const express = require("express");
 const z = require("zod");
 const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = require("../config");
 
+const { authMiddleware } = require("../middleware");
+const { JWT_SECRET } = require("../config");
 const { User } = require("../db");
 
 const router = express.Router();
@@ -80,6 +81,57 @@ router.post("/signin", async (req, res) => {
   }
   res.status(411).json({
     message: "Error while logging in",
+  });
+});
+
+//----------------for update user-----------------------
+
+const updateBody = z.object({
+  password: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+});
+
+router.put("/", authMiddleware, async (req, res) => {
+  const { success } = updateBody.safeParse(req.body);
+  if (!success) {
+    res.status(411).json({
+      message: "Error while updating information",
+    });
+  }
+  await User.updateOne({ _id: req.userId }, req.body);
+  res.status(200).json({
+    message: "Updated successfully",
+  });
+});
+
+//--------------------filter user----------------------------------
+
+router.get("/bulk", async (req, res) => {
+  const filter = req.query.filter || "";
+
+  const users = await User.find({
+    $or: [
+      {
+        firstName: {
+          $regex: filter,
+        },
+      },
+      {
+        lastName: {
+          $regex: filter,
+        },
+      },
+    ],
+  });
+
+  res.json({
+    user: users.map((user) => ({
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      _id: user._id,
+    })),
   });
 });
 

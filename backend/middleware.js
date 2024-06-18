@@ -12,11 +12,20 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const decode = jwt.verify(token, JWT_SECRET);
-    req.userId = decode.userId;
 
-    next();
+    if (decode.userId) {
+      req.userId = decode.userId;
+
+      next();
+    } else {
+      return res.status(404).json({
+        message: "unauthorized",
+      });
+    }
   } catch (error) {
-    console.log(error);
+    return res.status(404).json({
+      message: "unauthorized",
+    });
   }
 };
 
